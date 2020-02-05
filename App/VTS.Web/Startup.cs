@@ -32,6 +32,7 @@ namespace VTS.Web
             services.AddSingleton<WeatherForecastService>();
             services.AddSingleton<RedisDB>(new RedisDB(Configuration["RedisCon"], 7));
             services.AddTransient<BlazorTimer>();
+            AppConstants.TimeInterval = int.Parse(Configuration["Interval"]);
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

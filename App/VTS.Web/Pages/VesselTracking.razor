@@ -7,7 +7,7 @@
 @inject RedisDB redis1;
 @inject IJSRuntime IJS
 @inject BlazorTimer Timer
-
+@using VTS.Web.Data
 
 <GoogleMap @ref="@map1" Id="map1" Options="@mapOptions" Height="700" OnAfterInit="@(async () => await OnAfterInitAsync())"></GoogleMap>
 <button @onclick="SetArea">Set Area</button>
@@ -72,8 +72,9 @@
         ShipLocations = new List<Polygon>();
         ShipMarkers = new List<Marker>();
 
-        Timer.SetTimer(10000);
+        Timer.SetTimer(AppConstants.TimeInterval);
         Timer.OnElapsed += QueryDataPeriodically;
+        QueryDataPeriodically();
     }
     async void QueryDataPeriodically()
     {

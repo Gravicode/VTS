@@ -10,6 +10,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using VTS.Web.Data;
+using VTS.Web.Helpers;
 
 namespace VTS.Web
 {
@@ -29,6 +30,8 @@ namespace VTS.Web
             services.AddRazorPages();
             services.AddServerSideBlazor();
             services.AddSingleton<WeatherForecastService>();
+            services.AddSingleton<RedisDB>(new RedisDB(Configuration["RedisCon"], 7));
+            services.AddTransient<BlazorTimer>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

@@ -6,6 +6,11 @@
 
   <ItemGroup>
     <PackageReference Include="BlazorGoogleMaps" Version="0.5.2" />
+    <PackageReference Include="ServiceStack.Redis.Core" Version="5.8.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\VTS.Parser\VTS.Parser.csproj" />
   </ItemGroup>
 
 </Project>

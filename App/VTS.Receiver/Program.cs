@@ -67,7 +67,7 @@ namespace VTS.Receiver
 
                     //var obj = AisMessageJsonConvert.Deserialize(message);
 
-                    dynamic obj = parsed;
+                    Object obj=null;
                     switch (parsed.MessageType)
                     {
                         case AisMessageType.AddressedSafetyRelatedMessage:
@@ -165,7 +165,7 @@ namespace VTS.Receiver
                             break;
                         case AisMessageType.StandardSarAircraftPositionReport:
                             obj = parsed as StandardSarAircraftPositionReportMessage;
-                            ;
+                            
                             break;
                         case AisMessageType.StaticAndVoyageRelatedData:
                             obj = parsed as StaticAndVoyageRelatedDataMessage;
@@ -186,8 +186,10 @@ namespace VTS.Receiver
                     }
                     if (obj != null)
                     {
-                        Console.WriteLine($"{nameof(parsed.MessageType)} {obj}");
-                        var result = redis.InsertData<DataAIS>(new DataAIS() { Id = redis.GetSequence<DataAIS>(), Data = AisMessageJsonConvert.Serialize(obj), Tipe = nameof(parsed.MessageType) });
+                        var msg = obj as AisMessage;
+                        Console.WriteLine($"{nameof(parsed.MessageType)} {msg}");
+                        var insertObj = new DataAIS() { Id = redis.GetSequence<DataAIS>(), Data = msg, Tipe = nameof(parsed.MessageType) };
+                        var result = redis.InsertData<DataAIS>(insertObj);
                         Console.WriteLine($"insert to redis : {result}");
 
                     }

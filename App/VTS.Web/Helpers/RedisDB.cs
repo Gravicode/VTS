@@ -6,7 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using VTS.Parser;
 
-namespace VTS.Receiver.Helpers
+namespace VTS.Web.Helpers
 {
     public class DataAIS
     {

@@ -17,5 +17,6 @@ namespace VTS.Web.Data
         public string RTA { set; get; }
         public string ShipName { set; get; }
         public uint? Direction { get; set; }
+        public uint Mmsi { get; set; }
     }
 }

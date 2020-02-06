@@ -10,37 +10,48 @@
 @using VTS.Web.Data
 
 <GoogleMap @ref="@map1" Id="map1" Options="@mapOptions" Height="700" OnAfterInit="@(async () => await OnAfterInitAsync())"></GoogleMap>
-<button @onclick="SetArea">Set Area</button>
+<button class="btn btn-info mt-3" @onclick="SetArea">Set Area</button>
 
 
 @code {
-    int CounterDot = 0;
-    InfoWindow infoWindow;
+        int CounterDot = 0;
+        InfoWindow infoWindow;
     private GoogleMap map1;
     private MapOptions mapOptions;
- 
-  
+
+
     Polyline poly;
+    Polygon SelectedArea;
     List<LatLngLiteral> pathList;
-    List<PointXY> AreaObservation;
+    List<LatLngLiteral> AreaObservation;
     VesselData Ships;
-    List<Polygon> ShipLocations;
-    List<Marker> ShipMarkers;
+    Dictionary<uint, VesselLocation> ShipLocations;
 
     async Task SetArea()
     {
         if (pathList != null && pathList.Count > 2)
         {
             if (AreaObservation == null)
-                AreaObservation = new List<PointXY>();
+                AreaObservation = new List<LatLngLiteral>();
             else AreaObservation.Clear();
             foreach (var item in pathList)
             {
-                AreaObservation.Add(new PointXY(item.Lat, item.Lng));
+                AreaObservation.Add(item);
             }
             var newPathList = new List<LatLngLiteral>(pathList);
-            newPathList.Add(new LatLngLiteral() { Lat = pathList[0].Lat, Lng = pathList[0].Lng });
+            newPathList.Add(pathList[0]);
             await poly.SetPath(newPathList);
+
+            if(SelectedArea==null)
+            {
+                SelectedArea=await Polygon.CreateAsync(IJS);
+                await SelectedArea.SetMap(map1.InteropObject);
+                await SelectedArea.SetOptions(new PolygonOptions() { StrokeColor = "#2ECC71", StrokeOpacity = 0.8f, StrokeWeight = 3, FillColor = "#EAFAF1", FillOpacity = 0.3f });
+            }
+
+            await SelectedArea.SetPath(newPathList);
+
+
             Console.WriteLine("area has been set.");
         }
 
@@ -63,14 +74,13 @@
 
     private async Task OnAfterInitAsync()
     {
-        
+
         poly = await Polyline.CreateAsync(IJS);
         await poly.SetMap(map1.InteropObject);
         await map1.InteropObject.AddListener<PolyMouseEvent>("click", async (x) => { await addLatLng(x); });
         infoWindow = await InfoWindow.CreateAsync(IJS);
 
-        ShipLocations = new List<Polygon>();
-        ShipMarkers = new List<Marker>();
+        ShipLocations = new Dictionary<uint, VesselLocation>();
 
         Timer.SetTimer(AppConstants.TimeInterval);
         Timer.OnElapsed += QueryDataPeriodically;
@@ -84,46 +94,67 @@
             if (res)
             {
                 var dataKapal = Ships.GetAllShipInArea(AreaObservation);
-                if (ShipMarkers != null && ShipMarkers.Count > 0)
+                var shipMMSI = new HashSet<uint>();
+                dataKapal.ForEach(x => shipMMSI.Add(x.Mmsi));
+                if (ShipLocations != null && ShipLocations.Count > 0)
                 {
-                    foreach (var item in ShipMarkers)
+                    //remove old ships
+                    var removeMmmsi = new List<uint>();
+                    foreach(var key in ShipLocations.Keys)
                     {
-                        await item.SetMap(null);
+                        if (!shipMMSI.Contains(key))
+                            removeMmmsi.Add(key);
 
                     }
-                    foreach (var item in ShipLocations)
+                    foreach(var item in removeMmmsi)
                     {
-                        await item.SetMap(null);
-
+                        //await ShipLocations[item].ShipLocation.SetMap(null);
+                        await ShipLocations[item].ShipMarker.SetMap(null);
+                        ShipLocations.Remove(item);
                     }
-                    ShipMarkers.Clear();
-                    ShipLocations.Clear();
                 }
                 foreach (var item in dataKapal)
                 {
-                    var myPos = new LatLngLiteral() { Lat = item.Lat, Lng = item.Lng };
-                    var newTriangle = await Polygon.CreateAsync(IJS);
-                    var Heading = item.Direction.HasValue ? item.Direction.Value : 0;
-                    await newTriangle.SetPath(GetArrowFromPosition(myPos, 0.001f, (int)Heading));
-                    await newTriangle.SetOptions(new PolygonOptions() { StrokeColor = "#FF0000", StrokeOpacity = 0.8f, StrokeWeight = 3, FillColor = "#FF0000", FillOpacity = 0.9f });
-                    await newTriangle.SetMap(map1.InteropObject);
-                    ShipLocations.Add(newTriangle);
+                    //add new ship
+                    if (!ShipLocations.ContainsKey(item.Mmsi))
+                    {
+                        var newVesselLoc = new VesselLocation();
+                        //add polygon
+                        var myPos = new LatLngLiteral() { Lat = item.Lat, Lng = item.Lng };
+                        /*
+                        var newTriangle = await Polygon.CreateAsync(IJS);
+                        var Heading = item.Direction.HasValue ? item.Direction.Value : 0;
+                        await newTriangle.SetPath(GetArrowFromPosition(myPos, 0.001f, (int)Heading));
+                        await newTriangle.SetOptions(new PolygonOptions() { StrokeColor = "#FF0000", StrokeOpacity = 0.8f, StrokeWeight = 3, FillColor = "#FF0000", FillOpacity = 0.9f });
+                        await newTriangle.SetMap(map1.InteropObject);
+                        newVesselLoc.ShipLocation =newTriangle;*/
+                        //add marker
+                        var marker = await Marker.CreateAsync(IJS);
+                        await marker.SetPosition(myPos);
+                        await marker.SetMap(map1.InteropObject);
+                        await marker.AddListener<MouseEvent>("click", async (x) => await showInfo(x, item.Mmsi));
+                        newVesselLoc.ShipMarker = marker;
+                        //add ship info
+                        newVesselLoc.ShipInfo = item;
+                        ShipLocations.Add(item.Mmsi, newVesselLoc);
+                    }
+                    else //update existing ship
+                    {
+                        var newVesselLoc = ShipLocations[item.Mmsi];
+                        //add polygon
 
-                    var marker = await Marker.CreateAsync(IJS);
-                    await marker.SetPosition(myPos);
-                    var title = $"Ship Name : {item.ShipName}<br/>";
-                    title += $"Lat: {item.Lat}<br/>";
-                    title += $"Lon: {item.Lng}<br/>";
-                    title += $"Destination: {item.Dest}<br/>";
-                    title += $"Speed: {item.Speed}<br/>";
-                    title += $"Course: {item.Course}<br/>";
-                    title += $"Status: {item.Status}<br/>";
-                    title += $"ETA: {item.ETA}<br/>";
-
-
-                    await marker.SetMap(map1.InteropObject);
-                    await marker.AddListener<MouseEvent>("click", async (x) => await showInfo(x, title));
-                    ShipMarkers.Add(marker);
+                        var myPos = new LatLngLiteral() { Lat = item.Lat, Lng = item.Lng };
+                        /*
+                        var newTriangle = newVesselLoc.ShipLocation;
+                        var Heading = item.Direction.HasValue ? item.Direction.Value : 0;
+                        await newTriangle.SetPath(GetArrowFromPosition(myPos, 0.001f, (int)Heading));
+                        */
+                        //add marker
+                        var marker = ShipLocations[item.Mmsi].ShipMarker;
+                        await marker.SetPosition(myPos);
+                        //add ship info
+                        newVesselLoc.ShipInfo = item;
+                    }
                 }
 
             }
@@ -138,6 +169,11 @@
         {
             AreaObservation = null;
             pathList.Clear();
+            if (SelectedArea != null)
+            {
+                await SelectedArea.SetMap(null);
+                SelectedArea = null;
+            }
         }
 
         pathList.Add(e.LatLng);
@@ -154,20 +190,33 @@
     List<LatLngLiteral> GetArrowFromPosition(LatLngLiteral pos, float size = 0.1f, int Degree = 0)
     {
         var list = new List<LatLngLiteral>();
-        var vec1 = VectorExtentions.Rotate(new PointXY(pos.Lat, pos.Lng - size), Degree, new PointXY(pos.Lat, pos.Lng));
-        var vec2 = VectorExtentions.Rotate(new PointXY(pos.Lat - (size / 2), pos.Lng + size), Degree, new PointXY(pos.Lat, pos.Lng));
-        var vec3 = VectorExtentions.Rotate(new PointXY(pos.Lat + (size / 2), pos.Lng + size), Degree, new PointXY(pos.Lat, pos.Lng));
-        list.Add(new LatLngLiteral() { Lat = vec1.X, Lng = vec1.Y });
-        list.Add(new LatLngLiteral() { Lat = vec2.X, Lng = vec2.Y });
-        list.Add(new LatLngLiteral() { Lat = vec3.X, Lng = vec3.Y });
+        var vec1 = new PointXY(pos.Lng,pos.Lat);
+        var vec2 = VectorExtentions.Rotate(new PointXY(pos.Lng + size,pos.Lat - (size / 2)), Degree, new PointXY(pos.Lng,pos.Lat));
+        var vec3 = VectorExtentions.Rotate(new PointXY(pos.Lng + size,pos.Lat + (size / 2)), Degree, new PointXY(pos.Lng,pos.Lat));
+        list.Add(new LatLngLiteral() { Lat = vec1.Y, Lng = vec1.X });
+        list.Add(new LatLngLiteral() { Lat = vec2.Y, Lng = vec2.X });
+        list.Add(new LatLngLiteral() { Lat = vec3.Y, Lng = vec3.X });
 
         return list;
     }
 
-    async Task showInfo(MouseEvent e, string Message)
+    async Task showInfo(MouseEvent e, uint mmsi)
     {
-        var contentString = $"{Message}";// -> { e.LatLng.Lat} ,{ e.LatLng.Lng}";
-                                         // Replace the info window's content and position.
+        if (!ShipLocations.ContainsKey(mmsi)) return;
+        var item = ShipLocations[mmsi].ShipInfo;
+        var title = $"Ship Name : {item.ShipName}<br/>";
+        title += $"Lat: {item.Lat}<br/>";
+        title += $"Lon: {item.Lng}<br/>";
+        title += $"Destination: {item.Dest}<br/>";
+        title += $"Speed: {item.Speed}<br/>";
+        title += $"Course: {item.Course}<br/>";
+        title += $"Status: {item.Status}<br/>";
+        title += $"ETA: {item.ETA}<br/>";
+        if(item.Direction.HasValue)
+            title += $"Heading: {item.Direction.Value}<br/>";
+
+
+        var contentString = $"{title}";
         await infoWindow.SetContent(contentString);
         await infoWindow.SetPosition(e.LatLng);
         await infoWindow.Open(map1.InteropObject);

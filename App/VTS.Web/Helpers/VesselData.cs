@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using GoogleMapsComponents.Maps;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -97,7 +98,7 @@ namespace VTS.Web.Helpers
             return IsExist;
         }
 
-        public List<VesselInfo> GetAllShipInArea(List<PointXY> Area)
+        public List<VesselInfo> GetAllShipInArea(List<LatLngLiteral> Area)
         {
             var list = new List<VesselInfo>();
             try
@@ -117,7 +118,7 @@ namespace VTS.Web.Helpers
                         var shipInfo = ShipDatas[obj.Mmsi].Last() as StaticAndVoyageRelatedDataMessage;
 
                         loc = new PointXY(obj.Latitude, obj.Longitude);
-                        data = new VesselInfo() { Lat = obj.Latitude, Course = obj.CourseOverGround, Dest = shipInfo.Destination, ETA = $"{shipInfo.EtaDay}/{shipInfo.EtaMonth} {shipInfo.EtaHour}:{shipInfo.EtaMinute}", Lng = obj.Longitude, ShipName = shipInfo.ShipName, Speed = obj.SpeedOverGround, Status = obj.NavigationStatus.ToString(), Direction = obj.TrueHeading };
+                        data = new VesselInfo() { Mmsi = obj.Mmsi, Lat = obj.Latitude, Course = obj.CourseOverGround, Dest = shipInfo.Destination, ETA = $"{shipInfo.EtaDay}/{shipInfo.EtaMonth} {shipInfo.EtaHour}:{shipInfo.EtaMinute}", Lng = obj.Longitude, ShipName = shipInfo.ShipName, Speed = obj.SpeedOverGround, Status = obj.NavigationStatus.ToString(), Direction = obj.TrueHeading };
                     }
                     else if (item[item.Count - 1] is ExtendedClassBCsPositionReportMessage)
                     {
@@ -126,20 +127,24 @@ namespace VTS.Web.Helpers
                         var shipInfo = ShipDatas[obj.Mmsi].Last() as StaticAndVoyageRelatedDataMessage;
 
                         loc = new PointXY(obj.Latitude, obj.Longitude);
-                        data = new VesselInfo() { Lat = obj.Latitude, Course = obj.CourseOverGround, Dest = shipInfo.Destination, ETA = $"{shipInfo.EtaDay}/{shipInfo.EtaMonth} {shipInfo.EtaHour}:{shipInfo.EtaMinute}", Lng = obj.Longitude, ShipName = shipInfo.ShipName, Speed = obj.SpeedOverGround, Status = "", Direction = obj.TrueHeading };
+                        data = new VesselInfo() { Mmsi = obj.Mmsi, Lat = obj.Latitude, Course = obj.CourseOverGround, Dest = shipInfo.Destination, ETA = $"{shipInfo.EtaDay}/{shipInfo.EtaMonth} {shipInfo.EtaHour}:{shipInfo.EtaMinute}", Lng = obj.Longitude, ShipName = shipInfo.ShipName, Speed = obj.SpeedOverGround, Status = "", Direction = obj.TrueHeading };
 
                     }
                     if (data != null)
-                    //if (GeoFence.PolyContainsPointXY(Area,new PointXY(data.Lat, data.Lng)))
-                    {
-                        list.Add(data);
-                    }
+                        if (Area == null)
+                        {
+                            list.Add(data);
+                        }
+                        else if(GeoFence.PointInPolygon(new LatLngLiteral() { Lat=data.Lat, Lng=data.Lng }, Area))
+                        {
+                            list.Add(data);
+                        }
                 }
             }
             catch (Exception ex)
             {
 
-                Console.WriteLine("get ships error : "+ex.Message); 
+                Console.WriteLine("get ships error : " + ex.Message);
             }
             return list;
         }

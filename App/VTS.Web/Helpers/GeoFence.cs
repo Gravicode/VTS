@@ -1,4 +1,5 @@
-﻿using System;
+﻿using GoogleMapsComponents.Maps;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -7,6 +8,49 @@ namespace VTS.Web.Helpers
 {
     public class GeoFence
     {
+        public static bool PointInPolygon(LatLngLiteral p, List<LatLngLiteral> poly)
+        {
+            int n = poly.Count();
+
+            poly.Add(new LatLngLiteral { Lat = poly[0].Lat, Lng = poly[0].Lng });
+            LatLngLiteral[] v = poly.ToArray();
+
+            int wn = 0;    // the winding number counter
+
+            // loop through all edges of the polygon
+            for (int i = 0; i < n; i++)
+            {   // edge from V[i] to V[i+1]
+                if (v[i].Lat <= p.Lat)
+                {         // start y <= P.y
+                    if (v[i + 1].Lat > p.Lat)      // an upward crossing
+                        if (isLeft(v[i], v[i + 1], p) > 0)  // P left of edge
+                            ++wn;            // have a valid up intersect
+                }
+                else
+                {                       // start y > P.y (no test needed)
+                    if (v[i + 1].Lat <= p.Lat)     // a downward crossing
+                        if (isLeft(v[i], v[i + 1], p) < 0)  // P right of edge
+                            --wn;            // have a valid down intersect
+                }
+            }
+            if (wn != 0)
+                return true;
+            else
+                return false;
+
+        }
+
+        private static int isLeft(LatLngLiteral P0, LatLngLiteral P1, LatLngLiteral P2)
+        {
+            double calc = ((P1.Lng - P0.Lng) * (P2.Lat - P0.Lat)
+                    - (P2.Lng - P0.Lng) * (P1.Lat - P0.Lat));
+            if (calc > 0)
+                return 1;
+            else if (calc < 0)
+                return -1;
+            else
+                return 0;
+        }
         public static bool PolyContainsPointXY(List<PointXY> PointXYs, PointXY p)
         {
             bool inside = false;

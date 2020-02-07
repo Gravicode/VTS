@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using VTS.Parser;
 using VTS.Parser.Messages;
+using VTS.Shared;
 using VTS.Web.Data;
 
 namespace VTS.Web.Helpers
@@ -16,8 +17,9 @@ namespace VTS.Web.Helpers
         long LastIndex = 0;
         public Dictionary<uint,List<AisMessage>> ShipDatas { get; set; }
         public Dictionary<uint, List<AisMessage>> ShipPositions { get; set; }
-        RedisDB redis; 
 
+        static List<DeviceData> ShipSensors;
+        RedisDB redis; 
  
         public VesselData(RedisDB redis)
         {
@@ -25,6 +27,8 @@ namespace VTS.Web.Helpers
                 ShipDatas = new Dictionary<uint, List<AisMessage>>();
             if (ShipPositions == null)
                 ShipPositions = new Dictionary<uint, List<AisMessage>>();
+            if (ShipSensors == null)
+                ShipSensors = new List<DeviceData>();
             this.redis = redis;
         }
 
@@ -63,33 +67,34 @@ namespace VTS.Web.Helpers
             IsProcessing = true;
             try
             {
-            var allData = redis.GetAllData<DataAIS>();
-            if(allData!=null && LastIndex > 0)
-            {
-                allData = allData.Where(x => x.Id > LastIndex).ToList();
-            }
-            if (allData != null && allData.Count > 0)
-            {
-                foreach (var item in allData)
+                var allData = redis.GetAllData<DataAIS>();
+                if (allData != null && LastIndex > 0)
                 {
-                    switch (item.Data)
+                    allData = allData.Where(x => x.Id > LastIndex).ToList();
+                }
+                if (allData != null && allData.Count > 0)
+                {
+                    foreach (var item in allData)
                     {
-                        case PositionReportClassAMessage obj:
-                            AddShipPosition(obj);
-                            IsExist = true;
-                            break;
-                        case ExtendedClassBCsPositionReportMessage obj2:
-                            AddShipPosition(obj2);
-                            IsExist = true;
-                            break;
-                        case StaticAndVoyageRelatedDataMessage obj3:
-                            AddShipData(obj3);
-                            IsExist = true;
-                            break;
+                        switch (item.Data)
+                        {
+                            case PositionReportClassAMessage obj:
+                                AddShipPosition(obj);
+                                IsExist = true;
+                                break;
+                            case ExtendedClassBCsPositionReportMessage obj2:
+                                AddShipPosition(obj2);
+                                IsExist = true;
+                                break;
+                            case StaticAndVoyageRelatedDataMessage obj3:
+                                AddShipData(obj3);
+                                IsExist = true;
+                                break;
+                        }
+                        LastIndex = item.Id;
                     }
-                    LastIndex = item.Id;
                 }
-                }
+                ShipSensors = redis.GetAllData<DeviceData>();
             }
             finally
             {
@@ -147,6 +152,32 @@ namespace VTS.Web.Helpers
                 Console.WriteLine("get ships error : " + ex.Message);
             }
             return list;
+        }
+
+        public bool UpdateShipSensor(ref VesselInfo info)
+        {
+            if (info == null) return false;
+            if(ShipSensors!=null)
+            {
+                var mmsi = info.Mmsi;
+                var Fuels = (from x in ShipSensors
+                              where x.Mmsi == mmsi
+                              select new { x.FlowIn, x.FlowOut, x.Created}).ToList();
+                if (Fuels != null && Fuels.Count > 0)
+                {
+                    info.Fuel = Fuels.Sum(x => x.FlowIn) - Fuels.Sum(x => x.FlowOut);
+                    var fIn = Fuels.Where(x => x.FlowIn > 0).OrderByDescending(x => x.Created).FirstOrDefault();
+                    var fOut = Fuels.Where(x => x.FlowOut > 0).OrderByDescending(x => x.Created).FirstOrDefault();
+                    info.LastFlowIn = fIn.FlowIn;
+                    info.LastFlowInDate = fIn.Created;
+                    info.LastFlowOut = fOut.FlowOut;
+                    info.LastFlowOutDate = fOut.Created;
+                    return true;
+                }
+                
+            }
+            return false;
+
         }
 
     }

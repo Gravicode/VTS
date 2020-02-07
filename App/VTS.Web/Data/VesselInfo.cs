@@ -18,5 +18,10 @@ namespace VTS.Web.Data
         public string ShipName { set; get; }
         public uint? Direction { get; set; }
         public uint Mmsi { get; set; }
+        public double Fuel { get; set; }
+        public double LastFlowIn { set; get; }
+        public DateTime LastFlowInDate { get; set; }
+        public double LastFlowOut { get; set; }
+        public DateTime LastFlowOutDate { get; set; }
     }
 }

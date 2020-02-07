@@ -14,8 +14,8 @@
 
 
 @code {
-        int CounterDot = 0;
-        InfoWindow infoWindow;
+    int CounterDot = 0;
+    InfoWindow infoWindow;
     private GoogleMap map1;
     private MapOptions mapOptions;
 
@@ -42,9 +42,9 @@
             newPathList.Add(pathList[0]);
             await poly.SetPath(newPathList);
 
-            if(SelectedArea==null)
+            if (SelectedArea == null)
             {
-                SelectedArea=await Polygon.CreateAsync(IJS);
+                SelectedArea = await Polygon.CreateAsync(IJS);
                 await SelectedArea.SetMap(map1.InteropObject);
                 await SelectedArea.SetOptions(new PolygonOptions() { StrokeColor = "#2ECC71", StrokeOpacity = 0.8f, StrokeWeight = 3, FillColor = "#EAFAF1", FillOpacity = 0.3f });
             }
@@ -100,13 +100,13 @@
                 {
                     //remove old ships
                     var removeMmmsi = new List<uint>();
-                    foreach(var key in ShipLocations.Keys)
+                    foreach (var key in ShipLocations.Keys)
                     {
                         if (!shipMMSI.Contains(key))
                             removeMmmsi.Add(key);
 
                     }
-                    foreach(var item in removeMmmsi)
+                    foreach (var item in removeMmmsi)
                     {
                         //await ShipLocations[item].ShipLocation.SetMap(null);
                         await ShipLocations[item].ShipMarker.SetMap(null);
@@ -155,7 +155,11 @@
                         //add ship info
                         newVesselLoc.ShipInfo = item;
                     }
+                    var vessel = ShipLocations[item.Mmsi].ShipInfo;
+                    if (vessel != null)
+                        Ships.UpdateShipSensor(ref vessel);
                 }
+
 
             }
         }
@@ -190,9 +194,9 @@
     List<LatLngLiteral> GetArrowFromPosition(LatLngLiteral pos, float size = 0.1f, int Degree = 0)
     {
         var list = new List<LatLngLiteral>();
-        var vec1 = new PointXY(pos.Lng,pos.Lat);
-        var vec2 = VectorExtentions.Rotate(new PointXY(pos.Lng + size,pos.Lat - (size / 2)), Degree, new PointXY(pos.Lng,pos.Lat));
-        var vec3 = VectorExtentions.Rotate(new PointXY(pos.Lng + size,pos.Lat + (size / 2)), Degree, new PointXY(pos.Lng,pos.Lat));
+        var vec1 = new PointXY(pos.Lng, pos.Lat);
+        var vec2 = VectorExtentions.Rotate(new PointXY(pos.Lng + size, pos.Lat - (size / 2)), Degree, new PointXY(pos.Lng, pos.Lat));
+        var vec3 = VectorExtentions.Rotate(new PointXY(pos.Lng + size, pos.Lat + (size / 2)), Degree, new PointXY(pos.Lng, pos.Lat));
         list.Add(new LatLngLiteral() { Lat = vec1.Y, Lng = vec1.X });
         list.Add(new LatLngLiteral() { Lat = vec2.Y, Lng = vec2.X });
         list.Add(new LatLngLiteral() { Lat = vec3.Y, Lng = vec3.X });
@@ -212,9 +216,14 @@
         title += $"Course: {item.Course}<br/>";
         title += $"Status: {item.Status}<br/>";
         title += $"ETA: {item.ETA}<br/>";
-        if(item.Direction.HasValue)
+        if (item.Direction.HasValue)
             title += $"Heading: {item.Direction.Value}<br/>";
+        if (item.LastFlowIn > 0)
+            title += $"Last Flow In: [{item.LastFlowInDate}] -> {item.LastFlowIn}<br/>";
+        if (item.LastFlowOut > 0)
+            title += $"Last Flow Out: [{item.LastFlowOutDate}] -> {item.LastFlowOut}<br/>";
 
+        title += $"Fuel: {item.Fuel.ToString("n2")}<br/>";
 
         var contentString = $"{title}";
         await infoWindow.SetContent(contentString);

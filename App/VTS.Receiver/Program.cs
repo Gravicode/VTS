@@ -2,7 +2,7 @@
 namespace VTS.Receiver
 {
     using Microsoft.Extensions.Configuration;
-
+    using Newtonsoft.Json;
     using System;
     using System.Collections.Generic;
     using System.Reactive.Linq;
@@ -10,24 +10,54 @@ namespace VTS.Receiver
     using VTS.Parser;
     using VTS.Parser.Messages;
     using VTS.Receiver.Helpers;
+    using VTS.Shared;
 
     public static class Program
     {
-
+        static MqttService mqttService;
         static Parser parser;
         static RedisDB redis;
+        static IConfiguration config;
         static async Task Main(string[] args)
         {
-            var config = new ConfigurationBuilder()
+            config = new ConfigurationBuilder()
                             .AddJsonFile("settings.json", true, true)
                             .AddJsonFile("local.settings.json", true, true)
                             .Build();
-
+            AppConstants.MqttHost = config["mqtt-host"];
+            AppConstants.MqttUser = config["mqtt-user"];
+            AppConstants.MqttPass = config["mqtt-pass"];
+            AppConstants.MqttTopic = config["mqtt-topic"];
+            if (mqttService == null) mqttService = new MqttService();
+            mqttService.SubscribeTopic(new string[] { AppConstants.MqttTopic });
+            mqttService.OnMessageReceived += MqttService_OnMessageReceived;
             //storageClient = new StorageClient(config);
             //storageClient.InitialiseConnection();
             if (parser == null) parser = new Parser();
             redis = new RedisDB(config["RedisCon"],7);
-            var IP_AIS =  config["ip-ais"];
+
+
+            Task task1 = new Task(StartAISReceiver);
+            task1.Start();
+            
+            Console.WriteLine("receiver is running, press any key to stop.");
+            Console.ReadLine();
+            task1.Dispose();
+        }
+
+        private static void MqttService_OnMessageReceived(string Message)
+        {
+            var obj = JsonConvert.DeserializeObject<DeviceData>(Message);
+            if(obj != null)
+            {
+                var res =  redis.InsertData<DeviceData>(obj);
+                Console.WriteLine(res ? $"{obj.Created} -> device data inserted from mqtt": $"{obj.Created} -> device data fail to insert");
+            }
+        }
+
+        static async void StartAISReceiver()
+        {
+            var IP_AIS = config["ip-ais"];
             var Port_AIS = int.Parse(config["port-ais"]);
             var receiver = new NmeaReceiver(IP_AIS, Port_AIS);
             receiver.Items.Buffer(100).Subscribe(OnMessageReceived, OnError);
@@ -38,7 +68,6 @@ namespace VTS.Receiver
                 await receiver.RecieveAsync().ConfigureAwait(false);
             }
         }
-
         private static void OnError(Exception exception)
         {
             Console.WriteLine(exception.Message);

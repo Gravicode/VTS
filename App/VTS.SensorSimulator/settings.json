@@ -1,0 +1,8 @@
+{
+  "mqtt-host": "110.35.82.86",
+  "mqtt-user": "loradev_mqtt",
+  "mqtt-pass": "test123",
+  "mqtt-topic": "vts/device/data",
+  "data-interval": "5000",
+  "RedisCon": "redis://vFfVFMQI5xC/Q4Ib4Y08mcrup6hNixMV8zYu7lqte4g=@redis-murahaje.redis.cache.windows.net:6379"
+}

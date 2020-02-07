@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\VTS.Parser\VTS.Parser.csproj" />
+    <ProjectReference Include="..\VTS.Shared\VTS.Shared.csproj" />
   </ItemGroup>
 
 </Project>

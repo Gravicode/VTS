@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Blazor.Extensions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Hosting;
@@ -32,6 +33,7 @@ namespace VTS.Web
             services.AddSingleton<WeatherForecastService>();
             services.AddSingleton<RedisDB>(new RedisDB(Configuration["RedisCon"], 7));
             services.AddTransient<BlazorTimer>();
+            services.AddNotifications();
             AppConstants.TimeInterval = int.Parse(Configuration["Interval"]);
         }
 

@@ -9,8 +9,177 @@
 @inject BlazorTimer Timer
 @using VTS.Web.Data
 
-<GoogleMap @ref="@map1" Id="map1" Options="@mapOptions" Height="700" OnAfterInit="@(async () => await OnAfterInitAsync())"></GoogleMap>
-<button class="btn btn-info mt-3" @onclick="SetArea">Set Area</button>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12 mb-2">
+            <GoogleMap @ref="@map1" Id="map1" Options="@mapOptions" Height="700" OnAfterInit="@(async () => await OnAfterInitAsync())"></GoogleMap>
+            <button class="btn btn-info mt-3" @onclick="SetArea">Set Area</button>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <h4 class="alert alert-info mb-2">
+                BERTHING
+            </h4>
+            @{
+                var dataBerthing = new List<VTS.Shared.VesselData>();
+                if (ShipStatus != null)
+                {
+                    dataBerthing = ShipStatus.Where(x => x.Info.Status == "Berthing").ToList();
+                }
+            }
+            @if (dataBerthing == null || dataBerthing.Count <= 0)
+            {
+                <span class="alert alert-warning">empty</span>
+            }
+            else
+            {
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Ship Name</th>
+                            <th scope="col">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in dataBerthing)
+                        {
+                            <tr>
+                                <td scope="row">@item.Info.VesselName</td>
+                                <td>@item.Info.Status</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+
+
+
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <h4 class="alert alert-info mb-2">
+                ANCHOR
+            </h4>
+            @{
+                var dataAnchor = new List<VTS.Shared.VesselData>();
+                if (ShipStatus != null)
+                {
+                    dataAnchor = ShipStatus.Where(x => x.Info.Status == "Anchor").ToList();
+                }
+            }
+            @if (dataAnchor == null || dataAnchor.Count <= 0)
+            {
+                <span class="alert alert-warning">empty</span>
+            }
+            else
+            {
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Ship Name</th>
+                            <th scope="col">Anchor Time</th>
+                            <th scope="col">Discharge Plan</th>
+                            <th scope="col">Load Plan</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in dataAnchor)
+                        {
+                        <tr>
+                            <td scope="row">@item.Info.VesselName</td>
+                            <td>@item.Schedule.RealTimeAnchor.ToString("dd/MMM/yy HH:mm")</td>
+                            <td>@item.Activity.EstDischarge box</td>
+                            <td>@item.Activity.EstLoad box</td>
+                        </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <h4 class="alert alert-info mb-2">
+                ANCHOR NOT PLOTTING
+            </h4>
+            @{
+                var dataAnchorNotPlotting = new List<VTS.Shared.VesselData>();
+                if (ShipStatus != null)
+                {
+                    dataAnchorNotPlotting = ShipStatus.Where(x => x.Info.Status == "AnchorNotPlotting").ToList();
+                }
+            }
+            @if (dataAnchorNotPlotting == null || dataAnchorNotPlotting.Count <= 0)
+            {
+                <span class="alert alert-warning">empty</span>
+            }
+            else
+            {
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Ship Name</th>
+                            <th scope="col">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in dataAnchorNotPlotting)
+                        {
+                            <tr>
+                                <td scope="row">@item.Info.VesselName</td>
+                                <td>@item.Info.Status</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <h4 class="alert alert-info mb-2">
+                PLOTTING NOT ANCHOR YET
+            </h4>
+            @{
+                var dataOutside = new List<VTS.Shared.VesselData>();
+                if (ShipStatus != null)
+                {
+                    dataOutside = ShipStatus.Where(x => x.Info.Status == "Outside").ToList();
+                }
+            }
+            @if (dataOutside == null || dataOutside.Count <= 0)
+            {
+                <span class="alert alert-warning">empty</span>
+            }
+            else
+            {
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Ship Name</th>
+                            <th scope="col">Time Arrival</th>
+                            <th scope="col">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in dataOutside)
+                        {
+                        <tr>
+                            <td scope="row">@item.Info.VesselName</td>
+                            <td>@item.Schedule.EstTimeArrival.ToString("dd/MMM/yy HH:mm") </td>
+                            <td>@item.Info.Status</td>
+                        </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+    </div>
+</div>
+
 
 
 @code {
@@ -26,7 +195,7 @@
     List<LatLngLiteral> AreaObservation;
     VesselData Ships;
     Dictionary<uint, VesselLocation> ShipLocations;
-
+    List<VTS.Shared.VesselData> ShipStatus;
     async Task SetArea()
     {
         if (pathList != null && pathList.Count > 2)
@@ -72,6 +241,12 @@
 
     }
 
+    void RefreshShipStatus()
+    {
+        ShipStatus = redis1.GetAllData<VTS.Shared.VesselData>();
+        StateHasChanged();
+    }
+
     private async Task OnAfterInitAsync()
     {
 
@@ -85,6 +260,7 @@
         Timer.SetTimer(AppConstants.TimeInterval);
         Timer.OnElapsed += QueryDataPeriodically;
         QueryDataPeriodically();
+        RefreshShipStatus();
     }
     async void QueryDataPeriodically()
     {

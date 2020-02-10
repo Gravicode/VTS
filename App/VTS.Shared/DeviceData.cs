@@ -12,4 +12,6 @@ namespace VTS.Shared
         public double FlowOut { get; set; }
         public DateTime Created { get; set; }
     }
+
+
 }

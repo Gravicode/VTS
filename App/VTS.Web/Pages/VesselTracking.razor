@@ -39,15 +39,27 @@
                         <tr>
                             <th scope="col">Ship Name</th>
                             <th scope="col">Status</th>
+                            <th scope="col">Remain Disc.</th>
+                            <th scope="col">Load</th>
+                            <th scope="col">From</th>
+                            <th scope="col">To</th>
+                            <th scope="col">End Work</th>
+                            <th scope="col">Equipment</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (var item in dataBerthing)
                         {
-                            <tr>
-                                <td scope="row">@item.Info.VesselName</td>
-                                <td>@item.Info.Status</td>
-                            </tr>
+                        <tr>
+                            <td scope="row">@item.Info.VesselName</td>
+                            <td>@item.Info.Status</td>
+                            <td>@item.Activity.EstDischarge box</td>
+                            <td>@item.Activity.EstLoad box</td>
+                            <td>@item.Info.FromPort</td>
+                            <td>@item.Info.ToPort</td>
+                            <td>@item.Schedule.EstEndWork.ToString("dd/MMM/yy HH:mm")</td>
+                            <td>@item.Activity.EstEquipmentName</td>
+                        </tr>
                         }
                     </tbody>
                 </table>

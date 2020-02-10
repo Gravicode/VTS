@@ -1,0 +1,51 @@
+﻿@page "/berthing-monitoring"
+@using Blazor.Extensions.Canvas.Canvas2D
+@using Blazor.Extensions
+
+<h3>Berthing Monitoring</h3>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12 mb-2">
+            <BECanvas Width="900" Height="600" @ref="_canvasReference"></BECanvas>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12 mb-2">
+            <img src="workplace.jpg" alt="Workplace" usemap="#workmap">
+
+            <map name="workmap">
+                <area shape="rect" coords="34,44,270,350" alt="Computer" href="computer.htm">
+                <area shape="rect" coords="290,172,333,250" alt="Phone" href="phone.htm">
+                <area shape="circle" coords="337,300,44" alt="Coffee" href="coffee.htm">
+            </map>
+        </div>
+    </div>
+    
+</div>
+            @code {
+
+                void PushCanvas(MouseEventArgs x)
+                {
+                    Console.WriteLine($"CLick on {x.ScreenX},{x.ScreenY}");
+                }
+
+                private Canvas2DContext _context;
+                protected BECanvasComponent _canvasReference;
+
+                protected override async Task OnAfterRenderAsync(bool firstRender)
+                {
+                    this._context = await this._canvasReference.CreateCanvas2DAsync();
+
+                }
+
+                async void Redraw()
+                {
+                    
+                    await this._context.SetFillStyleAsync("green");
+
+                    await this._context.FillRectAsync(10, 100, 100, 100);
+
+                    await this._context.SetFontAsync("48px serif");
+                    await this._context.StrokeTextAsync("Hello Blazor!!!", 10, 100);
+                }
+            }

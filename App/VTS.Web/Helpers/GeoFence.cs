@@ -10,6 +10,7 @@ namespace VTS.Web.Helpers
     {
         public static bool PointInPolygon(LatLngLiteral p, List<LatLngLiteral> poly)
         {
+         
             int n = poly.Count();
 
             poly.Add(new LatLngLiteral { Lat = poly[0].Lat, Lng = poly[0].Lng });

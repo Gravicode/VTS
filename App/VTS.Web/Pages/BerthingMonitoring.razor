@@ -2,50 +2,235 @@
 @using Blazor.Extensions.Canvas.Canvas2D
 @using Blazor.Extensions
 
+@inject RedisDB redis1;
+@inject BlazorTimer Timer
+
+
 <h3>Berthing Monitoring</h3>
 <div class="container-fluid">
+
     <div class="row">
         <div class="col-12 mb-2">
-            <BECanvas Width="900" Height="600" @ref="_canvasReference"></BECanvas>
-        </div>
-    </div>
-    <div class="row">
-        <div class="col-12 mb-2">
-            <img src="workplace.jpg" alt="Workplace" usemap="#workmap">
+            @if (ImagePort != null)
+            {
+                <img src="@ImagePort" alt="Workplace" usemap="#workmap">
 
-            <map name="workmap">
-                <area shape="rect" coords="34,44,270,350" alt="Computer" href="computer.htm">
-                <area shape="rect" coords="290,172,333,250" alt="Phone" href="phone.htm">
-                <area shape="circle" coords="337,300,44" alt="Coffee" href="coffee.htm">
-            </map>
-        </div>
-    </div>
-    
-</div>
-            @code {
-
-                void PushCanvas(MouseEventArgs x)
-                {
-                    Console.WriteLine($"CLick on {x.ScreenX},{x.ScreenY}");
-                }
-
-                private Canvas2DContext _context;
-                protected BECanvasComponent _canvasReference;
-
-                protected override async Task OnAfterRenderAsync(bool firstRender)
-                {
-                    this._context = await this._canvasReference.CreateCanvas2DAsync();
-
-                }
-
-                async void Redraw()
-                {
-                    
-                    await this._context.SetFillStyleAsync("green");
-
-                    await this._context.FillRectAsync(10, 100, 100, 100);
-
-                    await this._context.SetFontAsync("48px serif");
-                    await this._context.StrokeTextAsync("Hello Blazor!!!", 10, 100);
-                }
+                <map name="workmap">
+                    @foreach (var item in ShipData)
+                    {
+                        <area shape="rect" coords="@String.Format("{0},{1},{2},{3}",item.X1.X,item.X1.Y,item.X2.X,item.X2.Y)" alt="@item.Info.VesselName" @onclick="@((args) => OpenInfo(item))">
+                    }
+                </map>
             }
+
+        </div>
+    </div>
+    <Modal @ref="modal">
+        <ChildContent>
+            @if (selectedShip != null)
+            {
+                <div style="overflow:scroll;height:600px;">
+                    <div class="well well-lg">
+                        <h4 class="alert alert-info">Vessel Information</h4>
+                        <table class="table">
+                            <tr>
+                                <td>
+                                    Reg No
+                                </td>
+                                <td>
+                                    :
+                                </td>
+                                <td>
+                                    @selectedShip.Info.RegInfo
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    Vessel Name
+                                </td>
+                                <td>
+                                    :
+                                </td>
+                                <td>
+                                    @selectedShip.Info.VesselName
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    Agent
+                                </td>
+                                <td>
+                                    :
+                                </td>
+                                <td>
+                                    @selectedShip.Info.Agent
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    Voyage
+                                </td>
+                                <td>
+                                    :
+                                </td>
+                                <td>
+                                    @selectedShip.Info.Voyage
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    From Port
+                                </td>
+                                <td>
+                                    :
+                                </td>
+                                <td>
+                                    @selectedShip.Info.FromPort
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    To Port
+                                </td>
+                                <td>
+                                    :
+                                </td>
+                                <td>
+                                    @selectedShip.Info.ToPort
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    Status
+                                </td>
+                                <td>
+                                    :
+                                </td>
+                                <td>
+                                    @selectedShip.Info.Status
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="well well-lg">
+                        <h4 class="alert alert-info">Vessel Activity</h4>
+                        <table class="table">
+                            <tr>
+                                <td>Remain Discharge</td>
+                                <td>:</td>
+                                <td>@selectedShip.Activity.EstDischarge box</td>
+                            </tr>
+                            <tr>
+                                <td>Remain Load</td>
+                                <td>:</td>
+                                <td>@selectedShip.Activity.EstLoad box</td>
+                            </tr>
+                            <tr>
+                                <td>Real From Meter</td>
+                                <td>:</td>
+                                <td>@selectedShip.Activity.EstFromMeter m</td>
+                            </tr>
+                            <tr>
+                                <td>Real To Meter</td>
+                                <td>:</td>
+                                <td>@selectedShip.Activity.EstToMeter m</td>
+                            </tr>
+                            <tr>
+                                <td>Real Equipment</td>
+                                <td>:</td>
+                                <td>@selectedShip.Activity.EstEquipment</td>
+                            </tr>
+                            <tr>
+                                <td>Real Equip. Name</td>
+                                <td>:</td>
+                                <td>@selectedShip.Activity.EstEquipmentName</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="well well-lg">
+                        <h4 class="alert alert-info">Time Management</h4>
+                        <table class="table">
+                            <tr>
+                                <td>Real Time Arrival</td>
+                                <td>:</td>
+                                <td>@selectedShip.Schedule.EstTimeArrival.ToString("dd/MM/yy HH:mm")</td>
+                            </tr>
+                            <tr>
+                                <td>Real Time Berthing</td>
+                                <td>:</td>
+                                <td>@selectedShip.Schedule.RealTimeBerthing.ToString("dd/MM/yy HH:mm")</td>
+                            </tr>
+                            <tr>
+                                <td>Real Start Work</td>
+                                <td>:</td>
+                                <td>@selectedShip.Schedule.EstStartWork.ToString("dd/MM/yy HH:mm")</td>
+                            </tr>
+                            <tr>
+                                <td>Real End Work</td>
+                                <td>:</td>
+                                <td>@selectedShip.Schedule.EstEndWork.ToString("dd/MM/yy HH:mm")</td>
+                            </tr>
+                            <tr>
+                                <td>Real Time Departure</td>
+                                <td>:</td>
+                                <td>@selectedShip.Schedule.EstTimeDeparture.ToString("dd/MM/yy HH:mm")</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <p>Empty Data</p>
+            }
+        </ChildContent>
+    </Modal>
+</div>
+@code {
+    List<VesselDataExt> ShipData;
+    string ImagePort = null;
+    VesselDataExt selectedShip;
+    private Modal modal { get; set; }
+    void OpenInfo(VesselDataExt ship)
+    {
+        selectedShip = ship;
+        //StateHasChanged();
+        modal.ShowBackdrop = true;
+        modal.Open("Berth Monitoring");
+        Console.WriteLine(ship);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+
+
+    }
+    protected override void OnInitialized()
+    {
+        Redraw();
+        Timer.SetTimer(AppConstants.TimeInterval);
+        Timer.OnElapsed += TimerTick;
+    }
+
+    void TimerTick()
+    {
+        Redraw();
+        StateHasChanged();
+    }
+    void Redraw()
+    {
+        var ShipStatus = redis1.GetAllData<VTS.Shared.VesselData>();
+        if (ShipStatus != null)
+        {
+            var data = BerthingImageCreator.CreateImage(ShipStatus);
+            if (data.Result)
+            {
+                ImagePort = ImageConverter.getByteImageHTML(data.FileName);
+                ShipData = data.Vessels;
+                //StateHasChanged();
+            }
+
+        }
+
+    }
+}
